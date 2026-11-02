@@ -29,8 +29,7 @@ browseruseagent/
 │   ├── core/
 │   │   ├── __init__.py
 │   │   ├── config.py          # Configuration management
-│   │   ├── database.py        # Database setup
-│   │   └── security.py        # Security utilities
+│   │   └── database.py        # Database setup
 │   ├── models/
 │   │   ├── __init__.py
 │   │   ├── agent.py           # Agent state models
@@ -48,16 +47,15 @@ browseruseagent/
 │   │   └── custom_tools.py    # Custom automation tools
 │   └── api/
 │       ├── __init__.py
-│       ├── routes/
-│       │   ├── __init__.py
-│       │   ├── agent.py       # Agent API endpoints
-│       │   └── browser.py     # Browser control endpoints
-│       └── dependencies.py    # API dependencies
+│       └── routes/
+│           ├── __init__.py
+│           ├── agent.py       # Agent API endpoints
+│           └── browser.py     # Browser control endpoints
 ├── tests/                     # Test suite
 ├── docker/                    # Docker configuration
-├── alembic/                   # Database migrations
-├── .env.example              # Environment variables template
+├── env.example                # Environment variables template
 ├── requirements.txt           # Python dependencies
+├── requirements-dev.txt       # Test and formatting tools
 └── README.md                 # This file
 ```
 
@@ -75,7 +73,7 @@ browseruseagent/
 
 3. **Set up environment variables**:
    ```bash
-   cp .env.example .env
+   cp env.example .env
    # Edit .env with your API keys and configuration
    ```
 
@@ -137,14 +135,11 @@ Key configuration options in `.env`:
 
 ### Running Tests
 
+Install the development tools first, then run the suite:
+
 ```bash
+pip install -r requirements-dev.txt
 pytest tests/
-```
-
-### Database Migrations
-
-```bash
-alembic upgrade head
 ```
 
 ### Code Formatting
@@ -164,4 +159,4 @@ isort app/ tests/
 
 ## License
 
-MIT License - see LICENSE file for details.
+No license file is included in this repository yet.

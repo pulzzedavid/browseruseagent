@@ -1,0 +1,5 @@
+# Development and test tools. Install with: pip install -r requirements-dev.txt
+pytest>=7
+pyyaml>=6
+black
+isort
