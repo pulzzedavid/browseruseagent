@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Use Agent - Chat Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .chat-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .chat-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .chat-header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .chat-messages {
+            height: 500px;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.bua {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 15px 20px;
+            border-radius: 20px;
+            position: relative;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.bua .message-content {
+            background: white;
+            color: #333;
+            border: 1px solid #e9ecef;
+            border-bottom-left-radius: 5px;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin: 0 10px;
+        }
+
+        .message.user .message-avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .message.bua .message-avatar {
+            background: #28a745;
+            color: white;
+        }
+
+        .message-time {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .chat-input-wrapper {
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-input {
+            flex: 1;
+            padding: 15px 20px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input:focus {
+            border-color: #667eea;
+        }
+
+        .send-button {
+            padding: 15px 25px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .send-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-indicator {
+            text-align: center;
+            padding: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .status-indicator.connected {
+            color: #28a745;
+        }
+
+        .status-indicator.disconnected {
+            color: #dc3545;
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 15px 20px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .action-log {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .action-log h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .action-step {
+            margin: 5px 0;
+            padding: 5px;
+            border-left: 3px solid #667eea;
+            background: white;
+        }
+
+        .action-step.success {
+            border-left-color: #28a745;
+        }
+
+        .action-step.error {
+            border-left-color: #dc3545;
+        }
+
+        .example-commands {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .example-commands h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+
+        .example-command {
+            background: white;
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border: 1px solid #e9ecef;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .example-command:hover {
+            background-color: #e9ecef;
+        }
+
+        .browser-control-panel {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            margin: 10px 20px;
+            padding: 15px;
+        }
+
+        .browser-control-panel h3 {
+            margin-bottom: 15px;
+            color: #333;
+            text-align: center;
+        }
+
+        .browser-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        .control-btn {
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+
+        .current-url {
+            text-align: center;
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 8px;
+            border-radius: 5px;
+            border: 1px solid #e9ecef;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>🤖 Browser Use Agent</h1>
+            <p>Chat with your browser automation assistant</p>
+        </div>
+
+        <div class="status-indicator" id="statusIndicator">
+            Checking connection...
+        </div>
+
+        <div class="browser-control-panel" id="browserControlPanel" style="display: none;">
+            <h3>🖥️ Browser Control Panel</h3>
+            <div class="browser-actions">
+                <button onclick="takeScreenshot()" class="control-btn">📸 Screenshot</button>
+                <button onclick="getPageInfo()" class="control-btn">📄 Page Info</button>
+                <button onclick="refreshPage()" class="control-btn">🔄 Refresh</button>
+                <button onclick="goBack()" class="control-btn">⬅️ Back</button>
+                <button onclick="goForward()" class="control-btn">➡️ Forward</button>
+            </div>
+            <div class="current-url" id="currentUrl">Current URL: None</div>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bua">
+                <div class="message-avatar">B</div>
+                <div class="message-content">
+                    <div>Hello! I'm your Browser Use Agent. I can help you automate web tasks.</div>
+                    <div class="message-time" id="welcomeTime"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            🤖 BUA is thinking and executing your request...
+        </div>
+
+        <div class="chat-input-container">
+            <div class="example-commands">
+                <h4>💡 Try these commands:</h4>
+                <div class="example-command" onclick="setCommand('create a new button called bua test in ButtonLog app')">
+                    "create a new button called bua test in ButtonLog app"
+                </div>
+                <div class="example-command" onclick="setCommand('navigate to google.com and search for browser automation')">
+                    "navigate to google.com and search for browser automation"
+                </div>
+                <div class="example-command" onclick="setCommand('go to github.com and show me trending repositories')">
+                    "go to github.com and show me trending repositories"
+                </div>
+            </div>
+
+            <div class="chat-input-wrapper">
+                <input type="text" class="chat-input" id="chatInput" placeholder="Type your request here... (e.g., 'create a new button called bua test in ButtonLog app')" />
+                <button class="send-button" id="sendButton" onclick="sendMessage()">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const BUA_API_BASE = 'http://localhost:8000';
+        let isProcessing = false;
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('welcomeTime').textContent = new Date().toLocaleTimeString();
+            checkConnection();
+        });
+
+        // Check BUA API connection
+        async function checkConnection() {
+            try {
+                const response = await fetch(`${BUA_API_BASE}/health`);
+                if (response.ok) {
+                    document.getElementById('statusIndicator').textContent = '✅ Connected to BUA API';
+                    document.getElementById('statusIndicator').className = 'status-indicator connected';
+                } else {
+                    throw new Error('API not responding');
+                }
+            } catch (error) {
+                document.getElementById('statusIndicator').textContent = '❌ BUA API not available. Make sure the server is running on localhost:8000';
+                document.getElementById('statusIndicator').className = 'status-indicator disconnected';
+            }
+        }
+
+        // Set command from example
+        function setCommand(command) {
+            document.getElementById('chatInput').value = command;
+            document.getElementById('chatInput').focus();
+        }
+
+        // Send message
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message || isProcessing) return;
+
+            // Add user message to chat
+            addMessage(message, 'user');
+            input.value = '';
+
+            // Show typing indicator
+            document.getElementById('typingIndicator').style.display = 'block';
+            isProcessing = true;
+            document.getElementById('sendButton').disabled = true;
+
+            try {
+                // Process the message with BUA
+                const result = await processWithBUA(message);
+                addMessage(result, 'bua');
+            } catch (error) {
+                addMessage(`❌ Error: ${error.message}`, 'bua');
+            } finally {
+                document.getElementById('typingIndicator').style.display = 'none';
+                isProcessing = false;
+                document.getElementById('sendButton').disabled = false;
+            }
+        }
+
+        // Process message with AI Agent Service
+        async function processWithBUA(message) {
+            try {
+                // Use the AI Agent Service to handle any natural language request
+                const response = await fetch(`${BUA_API_BASE}/agent/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        task: message,
+                        initial_url: null  // Let the AI decide where to start
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Agent service error: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    return `🚀 AI Agent started working on: "${message}"\n\nSession ID: ${result.session_id}\nStatus: ${result.status}\n\n${result.message}\n\n💡 The AI is now planning and executing the steps to complete your request. You can check the status or let me know if you need anything else!`;
+                } else {
+                    return `❌ AI Agent failed to start: ${result.error || 'Unknown error'}`;
+                }
+                
+            } catch (error) {
+                return `❌ Error starting AI Agent: ${error.message}\n\n💡 Make sure the agent service is running and try again.`;
+            }
+        }
+
+        // Handle button creation requests - REMOVED: Now handled by AI agent
+        // The AI agent will dynamically figure out how to create buttons based on the actual page structure
+        
+        // Handle navigation requests
+        async function handleNavigation(message) {
+            let actionLog = '<div class="action-log"><h4>🌐 Executing Navigation:</h4>';
+            
+            try {
+                // Extract URL from message
+                let url = '';
+                if (message.includes('google.com')) url = 'https://google.com';
+                else if (message.includes('github.com')) url = 'https://github.com';
+                else if (message.includes('http')) {
+                    const urlMatch = message.match(/(https?:\/\/[^\s]+)/);
+                    url = urlMatch ? urlMatch[1] : '';
+                } else {
+                    // Try to construct URL from domain
+                    const domainMatch = message.match(/(?:go to|visit|navigate to)\s+([^\s]+)/i);
+                    if (domainMatch) {
+                        const domain = domainMatch[1];
+                        url = domain.startsWith('http') ? domain : `https://${domain}`;
+                    }
+                }
+                
+                if (!url) {
+                    return `I couldn't extract a URL from your message. Please try being more specific, like "navigate to google.com" or "go to https://example.com"`;
+                }
+                
+                actionLog += `<div class="action-step">🌐 Navigating to: ${url}</div>`;
+                
+                const response = await fetch(`${BUA_API_BASE}/browser/navigate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+                
+                if (!response.ok) throw new Error('Navigation failed');
+                
+                const result = await response.json();
+                if (result.success) {
+                    actionLog += `<div class="action-step success">✅ Navigation successful!</div>`;
+                    showBrowserControlPanel(); // Show browser control panel
+                    updateCurrentUrl(url); // Update current URL display
+                    return `🚀 I've successfully navigated to ${url}!${actionLog}`;
+                } else {
+                    throw new Error(result.error || 'Navigation failed');
+                }
+                
+            } catch (error) {
+                actionLog += `<div class="action-step error">❌ Error: ${error.message}</div>`;
+                return `❌ Navigation failed: ${error.message}${actionLog}`;
+            }
+        }
+
+        // Add message to chat
+        function addMessage(content, sender) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.textContent = sender === 'user' ? 'U' : 'B';
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            messageContent.innerHTML = content;
+            
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            timeDiv.textContent = new Date().toLocaleTimeString();
+            
+            messageContent.appendChild(timeDiv);
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(messageContent);
+            messagesContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Handle Enter key
+        document.getElementById('chatInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Browser Control Panel Functions
+        async function takeScreenshot() {
+            try {
+                const response = await fetch(`${BUA_API_BASE}/browser/screenshot`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        addMessage(`📸 Screenshot taken and saved to: ${result.screenshot_path}`, 'bua');
+                    } else {
+                        addMessage(`❌ Screenshot failed: ${result.error}`, 'bua');
+                    }
+                }
+            } catch (error) {
+                addMessage(`❌ Screenshot error: ${error.message}`, 'bua');
+            }
+        }
+
+        async function getPageInfo() {
+            try {
+                const response = await fetch(`${BUA_API_BASE}/browser/page-info`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ include_dom: true })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    if (result.success) {
+                        const pageInfo = result.page_info;
+                        addMessage(`📄 Page Info: ${pageInfo.title || 'No title'} | URL: ${pageInfo.url}`, 'bua');
+                        updateCurrentUrl(pageInfo.url);
+                    } else {
+                        addMessage(`❌ Page info failed: ${result.error}`, 'bua');
+                    }
+                }
+            } catch (error) {
+                addMessage(`❌ Page info error: ${error.message}`, 'bua');
+            }
+        }
+
+        async function refreshPage() {
+            try {
+                const response = await fetch(`${BUA_API_BASE}/browser/refresh`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                
+                if (response.ok) {
+                    addMessage(`🔄 Page refreshed`, 'bua');
+                    getPageInfo(); // Update page info
+                }
+            } catch (error) {
+                addMessage(`❌ Refresh error: ${error.message}`, 'bua');
+            }
+        }
+
+        async function goBack() {
+            try {
+                const response = await fetch(`${BUA_API_BASE}/browser/back`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                
+                if (response.ok) {
+                    addMessage(`⬅️ Went back to previous page`, 'bua');
+                    getPageInfo(); // Update page info
+                }
+            } catch (error) {
+                addMessage(`❌ Go back error: ${error.message}`, 'bua');
+            }
+        }
+
+        async function goForward() {
+            try {
+                const response = await fetch(`${BUA_API_BASE}/browser/forward`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                
+                if (response.ok) {
+                    addMessage(`➡️ Went forward to next page`, 'bua');
+                    getPageInfo(); // Update page info
+                }
+            } catch (error) {
+                addMessage(`❌ Go forward error: ${error.message}`, 'bua');
+            }
+        }
+
+        function updateCurrentUrl(url) {
+            document.getElementById('currentUrl').textContent = `Current URL: ${url}`;
+        }
+
+        function showBrowserControlPanel() {
+            document.getElementById('browserControlPanel').style.display = 'block';
+        }
+
+        function hideBrowserControlPanel() {
+            document.getElementById('browserControlPanel').style.display = 'none';
+        }
+    </script>
+</body>
+</html>

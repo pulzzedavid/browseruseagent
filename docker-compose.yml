@@ -1,0 +1,123 @@
+version: '3.8'
+
+services:
+  # Main application
+  bua-app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "4006:8000"
+    environment:
+      - DEBUG=true
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=postgresql://bua_user:bua_password@postgres:5432/bua_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./logs:/app/logs
+      - ./screenshots:/app/screenshots
+      - ./temp:/app/temp
+      - ./custom_actions:/app/custom_actions
+    networks:
+      - bua-network
+    restart: unless-stopped
+
+  # PostgreSQL database
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_DB=bua_db
+      - POSTGRES_USER=bua_user
+      - POSTGRES_PASSWORD=bua_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "5438:5432"
+    networks:
+      - bua-network
+    restart: unless-stopped
+
+  # Redis for caching and task queue
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - bua-network
+    restart: unless-stopped
+
+  # Celery worker for background tasks
+  celery-worker:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: celery -A app.celery_app worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://bua_user:bua_password@postgres:5432/bua_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./logs:/app/logs
+      - ./screenshots:/app/screenshots
+      - ./temp:/app/temp
+    networks:
+      - bua-network
+    restart: unless-stopped
+
+  # Celery beat for scheduled tasks
+  celery-beat:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: celery -A app.celery_app beat --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://bua_user:bua_password@postgres:5432/bua_db
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://redis:6379/0
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - bua-network
+    restart: unless-stopped
+
+  # Flower for monitoring Celery
+  flower:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    command: celery -A app.celery_app flower --port=5555
+    ports:
+      - "5556:5555"
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - CELERY_BROKER_URL=redis://redis:6379/0
+    depends_on:
+      - redis
+      - celery-worker
+    networks:
+      - bua-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  bua-network:
+    driver: bridge

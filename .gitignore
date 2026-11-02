@@ -1,0 +1,28 @@
+# Secrets / local config
+.env
+.env.*
+!env.example
+
+# Browser session data (contains live cookies)
+browser_cookies.json
+browser_user_data/
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Runtime output
+logs/
+temp/
+screenshots/
+firefox_test.png
+*.log
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

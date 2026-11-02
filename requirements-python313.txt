@@ -1,0 +1,34 @@
+# Core dependencies - Python 3.13 compatible versions
+fastapi>=0.109.0
+uvicorn>=0.27.0
+playwright>=1.41.0
+pydantic>=2.6.0
+python-dotenv>=1.0.0
+
+# LLM and AI frameworks - Updated for Python 3.13
+openai>=1.12.0
+google-generativeai>=0.8.0
+langchain>=0.1.0
+langchain-openai>=0.1.0
+langchain-google-genai>=0.1.0
+
+# Database and state management - Python 3.13 compatible
+sqlalchemy>=2.0.25
+psycopg2-binary>=2.9.9
+alembic>=1.13.0
+
+# Message queue and concurrency
+celery>=5.3.4
+redis>=5.0.1
+
+# Utilities - Python 3.13 compatible
+requests>=2.31.0
+beautifulsoup4>=4.12.0
+lxml>=5.0.0
+python-multipart>=0.0.6
+
+# Additional Python 3.13 compatible packages
+typing-extensions>=4.9.0
+setuptools>=69.0.0
+wheel>=0.42.0
+

@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Use Agent - AI Chat Interface</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .chat-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .chat-header h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .chat-header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .chat-messages {
+            height: 500px;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.bua {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 15px 20px;
+            border-radius: 20px;
+            position: relative;
+        }
+
+        .message.user .message-content {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-bottom-right-radius: 5px;
+        }
+
+        .message.bua .message-content {
+            background: white;
+            color: #333;
+            border: 1px solid #e9ecef;
+            border-bottom-left-radius: 5px;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin: 0 10px;
+        }
+
+        .message.user .message-avatar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .message.bua .message-avatar {
+            background: #28a745;
+            color: white;
+        }
+
+        .message-time {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 5px;
+            text-align: right;
+        }
+
+        .chat-input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .chat-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .chat-input:focus {
+            border-color: #667eea;
+        }
+
+        .send-button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-top: 10px;
+            transition: transform 0.2s;
+        }
+
+        .send-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .send-button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .typing-indicator {
+            display: none;
+            text-align: center;
+            padding: 10px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .example-commands {
+            padding: 20px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .example-commands h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .example-command {
+            display: inline-block;
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 15px;
+            padding: 8px 15px;
+            margin: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+
+        .example-command:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .ai-info {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .ai-info h3 {
+            margin-bottom: 10px;
+        }
+
+        .ai-info p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .human-intervention {
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .intervention-header {
+            font-weight: bold;
+            color: #856404;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .intervention-message {
+            font-size: 14px;
+            color: #856404;
+            margin-bottom: 15px;
+            white-space: pre-wrap; /* Preserve line breaks */
+        }
+
+        .continue-btn {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .continue-btn:hover {
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>🤖 AI-Powered Browser Agent</h1>
+            <p>Ask me to do anything in your browser using natural language!</p>
+        </div>
+
+        <div class="ai-info">
+            <h3>🧠 Powered by AI Agent Service</h3>
+            <p>No hardcoded logic! I use AI to understand your requests and plan the best actions.</p>
+        </div>
+
+        <div class="chat-messages" id="chatMessages">
+            <div class="message bua">
+                <div class="message-avatar">B</div>
+                <div class="message-content">
+                    👋 Hello! I'm your AI-powered browser agent. I can help you with any browser automation task using natural language.
+                    <br><br>
+                    <strong>Try asking me to:</strong>
+                    <br>• "Create a new button called bua test in ButtonLog app"
+                    <br>• "Navigate to google.com and search for Python tutorials"
+                    <br>• "Fill out the contact form on example.com"
+                    <br>• "Take a screenshot of the current page"
+                    <br><br>
+                    Just describe what you want me to do, and I'll figure out the best way to accomplish it!
+                    <div class="message-time">Just now</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="example-commands">
+            <h3>💡 Example Commands:</h3>
+            <div class="example-command" onclick="setCommand('create a new button called bua test in ButtonLog app')">
+                "create a new button called bua test in ButtonLog app"
+            </div>
+            <div class="example-command" onclick="setCommand('navigate to google.com and search for Python tutorials')">
+                "navigate to google.com and search for Python tutorials"
+            </div>
+            <div class="example-command" onclick="setCommand('go to github.com and show me trending repositories')">
+                "go to github.com and show me trending repositories"
+            </div>
+            <div class="example-command" onclick="setCommand('take a screenshot of the current page')">
+                "take a screenshot of the current page"
+            </div>
+        </div>
+
+        <div class="chat-input-container">
+            <input type="text" class="chat-input" id="chatInput" placeholder="Type your request here... (e.g., 'create a new button called bua test in ButtonLog app')" />
+            <button class="send-button" id="sendButton" onclick="sendMessage()">🚀 Send to AI Agent</button>
+        </div>
+
+        <div class="typing-indicator" id="typingIndicator">
+            🤖 AI Agent is thinking and planning your request...
+        </div>
+    </div>
+
+    <script>
+        const BUA_API_BASE = 'http://localhost:8000';
+        let isProcessing = false;
+        let currentSessionId = null; // To store the session ID for resuming
+
+        // Set command from example
+        function setCommand(command) {
+            document.getElementById('chatInput').value = command;
+            document.getElementById('chatInput').focus();
+        }
+
+        // Send message to AI Agent
+        async function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            
+            if (!message || isProcessing) return;
+            
+            // Add user message
+            displayMessage(message, true);
+            input.value = '';
+            
+            // Show typing indicator
+            document.getElementById('typingIndicator').style.display = 'block';
+            isProcessing = true;
+            document.getElementById('sendButton').disabled = true;
+            
+            try {
+                // Send to AI Agent Service
+                const result = await processWithAI(message);
+                displayMessage(result, false);
+                // Check if the result indicates a human intervention
+                if (result.includes('human_intervention_required') || result.includes('paused_for_human_intervention')) {
+                    currentSessionId = result.match(/�� Session ID: (\d+)/)[1]; // Extract session ID
+                    document.getElementById('sendButton').disabled = true; // Disable send button during intervention
+                }
+            } catch (error) {
+                displayMessage(`❌ Error: ${error.message}`, false);
+            } finally {
+                document.getElementById('typingIndicator').style.display = 'none';
+                isProcessing = false;
+                document.getElementById('sendButton').disabled = false;
+                currentSessionId = null; // Clear session ID after processing
+            }
+        }
+
+        // Process message with AI Agent Service
+        async function processWithAI(message) {
+            try {
+                // Use the AI Agent Service to handle any natural language request
+                const response = await fetch(`${BUA_API_BASE}/agent/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        task: message,
+                        initial_url: null  // Let the AI decide where to start
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Agent service error: ${response.status}`);
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    currentSessionId = result.session_id; // Store session ID
+                    return `🚀 AI Agent started working on: "${message}"\n\n` +
+                           `📋 Session ID: ${result.session_id}\n` +
+                           `📊 Status: ${result.status}\n\n` +
+                           `${result.message}\n\n` +
+                           `💡 The AI is now planning and executing the steps to complete your request. ` +
+                           `You can check the status or let me know if you need anything else!`;
+                } else {
+                    return `❌ AI Agent failed to start: ${result.error || 'Unknown error'}\n\n` +
+                           `💡 Make sure the agent service is running and try again.`;
+                }
+                
+            } catch (error) {
+                return `❌ Error starting AI Agent: ${error.message}\n\n` +
+                       `💡 Make sure the agent service is running and try again.`;
+            }
+        }
+
+        // Add message to chat
+        function displayMessage(message, isUser = false) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${isUser ? 'user' : 'assistant'}`;
+            
+            if (isUser) {
+                messageDiv.textContent = message;
+            } else {
+                // Check if this is a human intervention message
+                if (message.includes('human_intervention_required') || message.includes('paused_for_human_intervention')) {
+                    messageDiv.innerHTML = `
+                        <div class="human-intervention">
+                            <div class="intervention-header">🤖 Human Intervention Required</div>
+                            <div class="intervention-message">${extractInterventionMessage(message)}</div>
+                            <button class="continue-btn" onclick="resumeAgent()">Continue After Login</button>
+                        </div>
+                    `;
+                } else {
+                    messageDiv.textContent = message;
+                }
+            }
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        function extractInterventionMessage(message) {
+            try {
+                // Try to parse the message as JSON to extract the actual message
+                const data = JSON.parse(message);
+                if (data.decision && data.decision.parameters && data.decision.parameters.message) {
+                    return data.decision.parameters.message;
+                } else if (data.parameters && data.parameters.message) {
+                    return data.parameters.message;
+                }
+            } catch (e) {
+                // If not JSON, try to extract message from text
+                if (message.includes('message')) {
+                    const match = message.match(/"message":\s*"([^"]+)"/);
+                    if (match) return match[1];
+                }
+            }
+            return "Please complete the required action in the browser window and then click Continue.";
+        }
+        
+        async function resumeAgent() {
+            if (!currentSessionId) {
+                displayMessage("No active session to resume.", false);
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/agent/resume/${currentSessionId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    displayMessage("✅ Agent execution resumed! The system will continue from where it left off.", false);
+                    // Start polling for updates again
+                    startPolling();
+                } else {
+                    displayMessage(`❌ Failed to resume agent: ${result.error}`, false);
+                }
+            } catch (error) {
+                displayMessage(`❌ Error resuming agent: ${error.message}`, false);
+            }
+        }
+
+        // Handle Enter key
+        document.getElementById('chatInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

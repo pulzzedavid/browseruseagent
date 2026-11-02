@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Browser Use Agent - Test UI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .status-bar {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+
+        .status-online { background: #28a745; }
+        .status-offline { background: #dc3545; }
+
+        .tabs {
+            display: flex;
+            border-bottom: 2px solid #e9ecef;
+            margin-bottom: 30px;
+        }
+
+        .tab {
+            padding: 15px 30px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .tab.active {
+            border-bottom-color: #667eea;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .tab:hover {
+            background: #f8f9fa;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .form-group input, .form-group textarea, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .response-area {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            min-height: 200px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            overflow-y: auto;
+        }
+
+        .response-area.success {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+
+        .response-area.error {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+        }
+
+        .card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+        }
+
+        .card h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .log-entry {
+            background: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+
+        .log-entry.error {
+            border-left-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        .log-entry.success {
+            border-left-color: #28a745;
+            background: #d4edda;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+            
+            .btn-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌐 Browser Use Agent</h1>
+            <p>Test UI for Browser Automation APIs</p>
+        </div>
+
+        <div class="content">
+            <div class="status-bar">
+                <span class="status-indicator" id="statusIndicator"></span>
+                <span id="statusText">Checking server status...</span>
+            </div>
+
+            <div class="tabs">
+                <div class="tab active" onclick="showTab('browser')">🌐 Browser Control</div>
+                <div class="tab" onclick="showTab('agent')">🤖 Agent Sessions</div>
+                <div class="tab" onclick="showTab('logs')">📋 Activity Logs</div>
+            </div>
+
+            <!-- Browser Control Tab -->
+            <div id="browser" class="tab-content active">
+                <div class="grid">
+                    <div class="card">
+                        <h3>Navigation</h3>
+                        <div class="form-group">
+                            <label for="navUrl">URL to Navigate:</label>
+                            <input type="url" id="navUrl" placeholder="https://example.com" value="https://httpbin.org/html">
+                        </div>
+                        <button class="btn" onclick="navigate()">Navigate</button>
+                    </div>
+
+                    <div class="card">
+                        <h3>Page Information</h3>
+                        <button class="btn" onclick="getPageInfo()">Get Page Info</button>
+                        <button class="btn btn-secondary" onclick="getCurrentUrl()">Get Current URL</button>
+                    </div>
+
+                    <div class="card">
+                        <h3>Click Actions</h3>
+                        <div class="form-group">
+                            <label for="clickSelector">CSS Selector:</label>
+                            <input type="text" id="clickSelector" placeholder="button, .class, #id">
+                        </div>
+                        <button class="btn" onclick="clickElement()">Click Element</button>
+                    </div>
+
+                    <div class="card">
+                        <h3>Type Actions</h3>
+                        <div class="form-group">
+                            <label for="typeSelector">CSS Selector:</label>
+                            <input type="text" id="typeSelector" placeholder="input[name='field']">
+                        </div>
+                        <div class="form-group">
+                            <label for="typeText">Text to Type:</label>
+                            <input type="text" id="typeText" placeholder="Hello World">
+                        </div>
+                        <button class="btn" onclick="typeText()">Type Text</button>
+                    </div>
+                </div>
+
+                <div class="response-area" id="browserResponse">Browser responses will appear here...</div>
+            </div>
+
+            <!-- Agent Sessions Tab -->
+            <div id="agent" class="tab-content">
+                <div class="grid">
+                    <div class="card">
+                        <h3>Start Session</h3>
+                        <div class="form-group">
+                            <label for="taskDescription">Task Description:</label>
+                            <textarea id="taskDescription" rows="3" placeholder="Describe what you want the agent to do...">Navigate to a website and get the page title</textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="initialUrl">Initial URL (optional):</label>
+                            <input type="url" id="initialUrl" placeholder="https://example.com" value="https://httpbin.org/html">
+                        </div>
+                        <button class="btn" onclick="startSession()">Start Session</button>
+                    </div>
+
+                    <div class="card">
+                        <h3>Session Control</h3>
+                        <div class="form-group">
+                            <label for="sessionId">Session ID:</label>
+                            <input type="text" id="sessionId" placeholder="Session ID will appear here" readonly>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn btn-secondary" onclick="getSessionStatus()">Get Status</button>
+                            <button class="btn btn-secondary" onclick="getSessionHistory()">Get History</button>
+                            <button class="btn btn-danger" onclick="stopSession()">Stop Session</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="response-area" id="agentResponse">Agent responses will appear here...</div>
+            </div>
+
+            <!-- Logs Tab -->
+            <div id="logs" class="tab-content">
+                <div class="card">
+                    <h3>Activity Logs</h3>
+                    <div id="logsContainer">
+                        <div class="log-entry">No logs yet. Start using the APIs to see activity.</div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="clearLogs()">Clear Logs</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let currentSessionId = null;
+
+        // Check server status on load
+        window.onload = function() {
+            checkServerStatus();
+        };
+
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        async function checkServerStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                if (response.ok) {
+                    const data = await response.json();
+                    updateStatus(true, `Server Online - ${data.service} v${data.version}`);
+                } else {
+                    updateStatus(false, 'Server Error');
+                }
+            } catch (error) {
+                updateStatus(false, 'Server Offline');
+            }
+        }
+
+        function updateStatus(online, text) {
+            const indicator = document.getElementById('statusIndicator');
+            const statusText = document.getElementById('statusText');
+            
+            indicator.className = `status-indicator ${online ? 'status-online' : 'status-offline'}`;
+            statusText.textContent = text;
+        }
+
+        function log(message, type = 'info') {
+            const logsContainer = document.getElementById('logsContainer');
+            const logEntry = document.createElement('div');
+            logEntry.className = `log-entry ${type}`;
+            logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logsContainer.insertBefore(logEntry, logsContainer.firstChild);
+        }
+
+        function showResponse(containerId, data, isError = false) {
+            const container = document.getElementById(containerId);
+            container.textContent = JSON.stringify(data, null, 2);
+            container.className = `response-area ${isError ? 'error' : 'success'}`;
+        }
+
+        // Browser Control Functions
+        async function navigate() {
+            const url = document.getElementById('navUrl').value;
+            if (!url) {
+                alert('Please enter a URL');
+                return;
+            }
+
+            try {
+                log(`Navigating to: ${url}`);
+                const response = await fetch(`${API_BASE}/browser/navigate`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url })
+                });
+
+                const data = await response.json();
+                showResponse('browserResponse', data, !data.success);
+                log(`Navigation ${data.success ? 'successful' : 'failed'}: ${data.error || 'OK'}`);
+            } catch (error) {
+                showResponse('browserResponse', { error: error.message }, true);
+                log(`Navigation error: ${error.message}`, 'error');
+            }
+        }
+
+        async function getPageInfo() {
+            try {
+                log('Getting page info...');
+                const response = await fetch(`${API_BASE}/browser/page-info`);
+                const data = await response.json();
+                showResponse('browserResponse', data, !data.success);
+                log(`Page info ${data.success ? 'retrieved' : 'failed'}`);
+            } catch (error) {
+                showResponse('browserResponse', { error: error.message }, true);
+                log(`Page info error: ${error.message}`, 'error');
+            }
+        }
+
+        async function getCurrentUrl() {
+            try {
+                log('Getting current URL...');
+                const response = await fetch(`${API_BASE}/browser/current-url`);
+                const data = await response.json();
+                showResponse('browserResponse', data, !data.success);
+                log(`Current URL ${data.success ? 'retrieved' : 'failed'}`);
+            } catch (error) {
+                showResponse('browserResponse', { error: error.message }, true);
+                log(`Current URL error: ${error.message}`, 'error');
+            }
+        }
+
+        async function clickElement() {
+            const selector = document.getElementById('clickSelector').value;
+            if (!selector) {
+                alert('Please enter a CSS selector');
+                return;
+            }
+
+            try {
+                log(`Clicking element: ${selector}`);
+                const response = await fetch(`${API_BASE}/browser/click`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ selector })
+                });
+
+                const data = await response.json();
+                showResponse('browserResponse', data, !data.success);
+                log(`Click ${data.success ? 'successful' : 'failed'}: ${data.error || 'OK'}`);
+            } catch (error) {
+                showResponse('browserResponse', { error: error.message }, true);
+                log(`Click error: ${error.message}`, 'error');
+            }
+        }
+
+        async function typeText() {
+            const selector = document.getElementById('typeSelector').value;
+            const text = document.getElementById('typeText').value;
+            
+            if (!selector || !text) {
+                alert('Please enter both selector and text');
+                return;
+            }
+
+            try {
+                log(`Typing text in: ${selector}`);
+                const response = await fetch(`${API_BASE}/browser/type`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ selector, text })
+                });
+
+                const data = await response.json();
+                showResponse('browserResponse', data, !data.success);
+                log(`Type ${data.success ? 'successful' : 'failed'}: ${data.error || 'OK'}`);
+            } catch (error) {
+                showResponse('browserResponse', { error: error.message }, true);
+                log(`Type error: ${error.message}`, 'error');
+            }
+        }
+
+        // Agent Functions
+        async function startSession() {
+            const task = document.getElementById('taskDescription').value;
+            const initialUrl = document.getElementById('initialUrl').value;
+            
+            if (!task) {
+                alert('Please enter a task description');
+                return;
+            }
+
+            try {
+                log(`Starting agent session with task: ${task}`);
+                const response = await fetch(`${API_BASE}/agent/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ task, initial_url: initialUrl || null })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    currentSessionId = data.session_id;
+                    document.getElementById('sessionId').value = currentSessionId;
+                    log(`Session started: ${currentSessionId}`, 'success');
+                }
+                showResponse('agentResponse', data, !data.success);
+            } catch (error) {
+                showResponse('agentResponse', { error: error.message }, true);
+                log(`Session start error: ${error.message}`, 'error');
+            }
+        }
+
+        async function getSessionStatus() {
+            if (!currentSessionId) {
+                alert('No active session. Please start a session first.');
+                return;
+            }
+
+            try {
+                log(`Getting session status: ${currentSessionId}`);
+                const response = await fetch(`${API_BASE}/agent/${currentSessionId}/status`);
+                const data = await response.json();
+                showResponse('agentResponse', data, !data.success);
+                log(`Status retrieved for session: ${currentSessionId}`);
+            } catch (error) {
+                showResponse('agentResponse', { error: error.message }, true);
+                log(`Status error: ${error.message}`, 'error');
+            }
+        }
+
+        async function getSessionHistory() {
+            if (!currentSessionId) {
+                alert('No active session. Please start a session first.');
+                return;
+            }
+
+            try {
+                log(`Getting session history: ${currentSessionId}`);
+                const response = await fetch(`${API_BASE}/agent/${currentSessionId}/history`);
+                const data = await response.json();
+                showResponse('agentResponse', data, !data.success);
+                log(`History retrieved for session: ${currentSessionId}`);
+            } catch (error) {
+                showResponse('agentResponse', { error: error.message }, true);
+                log(`History error: ${error.message}`, 'error');
+            }
+        }
+
+        async function stopSession() {
+            if (!currentSessionId) {
+                alert('No active session. Please start a session first.');
+                return;
+            }
+
+            try {
+                log(`Stopping session: ${currentSessionId}`);
+                const response = await fetch(`${API_BASE}/agent/${currentSessionId}/stop`, {
+                    method: 'POST'
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentSessionId = null;
+                    document.getElementById('sessionId').value = '';
+                    log(`Session stopped: ${data.message}`, 'success');
+                }
+                
+                showResponse('agentResponse', data, !data.success);
+            } catch (error) {
+                showResponse('agentResponse', { error: error.message }, true);
+                log(`Stop session error: ${error.message}`, 'error');
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('logsContainer').innerHTML = '<div class="log-entry">Logs cleared.</div>';
+        }
+
+        // Auto-refresh server status every 10 seconds
+        setInterval(checkServerStatus, 10000);
+    </script>
+</body>
+</html>
+
