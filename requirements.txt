@@ -37,3 +37,8 @@ python-multipart>=0.0.6
 typing-extensions>=4.9.0
 setuptools>=69.0.0
 wheel>=0.42.0
+
+# Testing (also in requirements-dev.txt; listed here too so an environment
+# built from requirements.txt alone can still run the test suite)
+pytest>=7
+pyyaml>=6

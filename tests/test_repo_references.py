@@ -1,19 +1,52 @@
 """Guard against README.md and docker-compose.yml naming files that do not exist.
 
-Each check is a helper that takes the document's text (plus the repo root) and
-returns a list of problems, every one naming the missing path, so the checks can
-be exercised on hand-written snippets as well as on the real files.
+Each check is a helper that takes the document's text plus an ``exists``
+predicate over repo-relative paths, and returns a list of problems, every one
+naming the missing path, so the checks can be exercised on hand-written
+snippets as well as on the real files.
+
+"Exists" means tracked by git (``git ls-files``, which includes staged files),
+not merely present on disk: an untracked alembic/ dir or LICENSE on one
+developer's machine must not hide a reference that a clean checkout would
+break. Outside a git checkout (e.g. an unpacked source archive) the check
+falls back to the working tree.
 """
 
 from __future__ import annotations
 
+import subprocess
 import re
 import shlex
-from pathlib import Path
+from pathlib import Path, PurePosixPath
+from typing import Callable
 
 import yaml
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+
+Exists = Callable[[str], bool]
+
+
+def _normalize(rel: str) -> str:
+    return str(PurePosixPath(rel.strip().rstrip("/") or "."))
+
+
+def tracked_exists(root: Path) -> Exists:
+    """Return a predicate: is this repo-relative path a git-tracked file or dir?"""
+    try:
+        out = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "-z"],
+            check=True,
+            capture_output=True,
+        ).stdout.decode()
+    except (OSError, subprocess.CalledProcessError):
+        return lambda rel: (root / rel).exists()
+    tracked: set[str] = {"."}
+    for name in filter(None, out.split("\0")):
+        path = PurePosixPath(name)
+        tracked.add(str(path))
+        tracked.update(str(parent) for parent in path.parents)
+    return lambda rel: _normalize(rel) in tracked
 
 # Bind-mount sources that docker creates at runtime (git-ignored output dirs).
 RUNTIME_MOUNT_DIRS = {"logs", "screenshots", "temp", "custom_actions"}
@@ -50,13 +83,13 @@ def readme_tree_paths(readme_text: str) -> list[str]:
     return []
 
 
-def check_readme_tree(readme_text: str, root: Path) -> list[str]:
+def check_readme_tree(readme_text: str, exists: Exists) -> list[str]:
     paths = readme_tree_paths(readme_text)
     problems = [] if paths else ["README project tree not found"]
     problems += [
         f"README project tree lists missing path: {p}"
         for p in paths
-        if not (root / p).exists()
+        if not exists(p)
     ]
     return problems
 
@@ -86,25 +119,23 @@ def readme_command_paths(readme_text: str) -> list[str]:
     return paths
 
 
-def check_readme_commands(readme_text: str, root: Path) -> list[str]:
+def check_readme_commands(readme_text: str, exists: Exists) -> list[str]:
     return [
         f"README command names missing path: {p}"
         for p in readme_command_paths(readme_text)
-        if not (root / p).exists()
+        if not exists(p)
     ]
 
 
-def _module_exists(module: str, root: Path) -> bool:
+def _module_exists(module: str, exists: Exists) -> bool:
     module = module.split(":", 1)[0]
     if not module.startswith("app."):
         return False
-    rel = Path(*module.split("."))
-    return (root / rel.with_suffix(".py")).is_file() or (
-        root / rel / "__init__.py"
-    ).is_file()
+    rel = PurePosixPath(*module.split("."))
+    return exists(str(rel.with_suffix(".py"))) or exists(str(rel / "__init__.py"))
 
 
-def check_compose(compose_text: str, root: Path) -> list[str]:
+def check_compose(compose_text: str, exists: Exists) -> list[str]:
     problems: list[str] = []
     services = (yaml.safe_load(compose_text) or {}).get("services") or {}
     for name, svc in services.items():
@@ -112,11 +143,15 @@ def check_compose(compose_text: str, root: Path) -> list[str]:
         if isinstance(build, str):
             build = {"context": build}
         if isinstance(build, dict):
-            context = root / build.get("context", ".")
-            dockerfile = context / build.get("dockerfile", "Dockerfile")
-            if not dockerfile.exists():
+            dockerfile = _normalize(
+                str(
+                    PurePosixPath(build.get("context", "."))
+                    / build.get("dockerfile", "Dockerfile")
+                )
+            )
+            if not exists(dockerfile):
                 problems.append(
-                    f"compose service {name}: missing dockerfile {dockerfile.relative_to(root)}"
+                    f"compose service {name}: missing dockerfile {dockerfile}"
                 )
 
         for vol in svc.get("volumes") or []:
@@ -128,7 +163,7 @@ def check_compose(compose_text: str, root: Path) -> list[str]:
             rel = source[2:].rstrip("/")
             if rel in RUNTIME_MOUNT_DIRS:
                 continue
-            if not (root / rel).exists():
+            if not exists(rel):
                 problems.append(
                     f"compose service {name}: missing bind-mount source {source}"
                 )
@@ -145,7 +180,7 @@ def check_compose(compose_text: str, root: Path) -> list[str]:
                 target = words[i + 1]
             elif word.startswith("--app="):
                 target = word.split("=", 1)[1]
-            if target and not _module_exists(target, root):
+            if target and not _module_exists(target, exists):
                 problems.append(
                     f"compose service {name}: -A target {target} is not a module under app/"
                 )
@@ -161,19 +196,21 @@ def check_compose(compose_text: str, root: Path) -> list[str]:
 
 # --- tests on the real files -------------------------------------------------
 
+EXISTS = tracked_exists(REPO_ROOT)
+
 
 def test_readme_tree_paths_exist():
-    problems = check_readme_tree((REPO_ROOT / "README.md").read_text(), REPO_ROOT)
+    problems = check_readme_tree((REPO_ROOT / "README.md").read_text(), EXISTS)
     assert not problems, "\n".join(problems)
 
 
 def test_readme_command_paths_exist():
-    problems = check_readme_commands((REPO_ROOT / "README.md").read_text(), REPO_ROOT)
+    problems = check_readme_commands((REPO_ROOT / "README.md").read_text(), EXISTS)
     assert not problems, "\n".join(problems)
 
 
 def test_compose_references_exist():
-    problems = check_compose((REPO_ROOT / "docker-compose.yml").read_text(), REPO_ROOT)
+    problems = check_compose((REPO_ROOT / "docker-compose.yml").read_text(), EXISTS)
     assert not problems, "\n".join(problems)
 
 
@@ -195,10 +232,10 @@ def test_helpers_report_bogus_paths():
         "```\nrepo/\n├── app/\n│   └── core/\n│       └── nope.py   # bogus\n└── README.md\n```\n"
         "```bash\npip install -r requirements-nope.txt\ncp nope.example .env\npytest nope_tests/\n```\n"
     )
-    assert check_readme_tree(readme, REPO_ROOT) == [
+    assert check_readme_tree(readme, EXISTS) == [
         "README project tree lists missing path: app/core/nope.py"
     ]
-    assert check_readme_commands(readme, REPO_ROOT) == [
+    assert check_readme_commands(readme, EXISTS) == [
         "README command names missing path: requirements-nope.txt",
         "README command names missing path: nope.example",
         "README command names missing path: nope_tests/",
@@ -214,9 +251,26 @@ services:
       - ./logs:/app/logs
       - ./docker/nope.sql:/init.sql
 """
-    assert check_compose(compose, REPO_ROOT) == [
+    assert check_compose(compose, EXISTS) == [
         "compose service web: missing dockerfile docker/Nope.Dockerfile",
         "compose service web: missing bind-mount source ./docker/nope.sql",
         "compose service web: -A target app.nope_app is not a module under app/",
         "compose service web: depends_on names undefined service ghost",
+    ]
+
+
+def test_untracked_file_on_disk_does_not_count(tmp_path):
+    """A file present on disk but never committed must still be reported."""
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    (tmp_path / "README.md").write_text("tracked")
+    subprocess.run(["git", "-C", str(tmp_path), "add", "README.md"], check=True)
+    (tmp_path / "LICENSE").write_text("untracked")
+    (tmp_path / "alembic").mkdir()
+    (tmp_path / "alembic" / "env.py").write_text("untracked")
+
+    exists = tracked_exists(tmp_path)
+    readme = "```\nrepo/\n├── alembic/\n├── LICENSE\n└── README.md\n```\n"
+    assert check_readme_tree(readme, exists) == [
+        "README project tree lists missing path: alembic",
+        "README project tree lists missing path: LICENSE",
     ]
